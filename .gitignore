@@ -1,0 +1,9 @@
+.env
+/vendor/
+.harness/
+*.log
+.DS_Store
+.check-*
+.tiny.png
+storage/*
+!storage/.gitkeep

@@ -1,0 +1,66 @@
+name: Validate PHP application
+
+on:
+  push:
+    branches: [main, production]
+  pull_request:
+    branches: [main, production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_mysql, json, curl
+          coverage: none
+
+      - name: Validate Composer metadata
+        run: composer validate --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Lint PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -name '*.php' -not -path './vendor/*' -print0 \
+            | xargs -0 -n1 php -l
+
+      - name: Check production-safe files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .env
+          test ! -e storage/state.json
+          ! grep -RInE 'Authorization: \[redacted\]|access_token[[:space:]]*=' src public bin
+
+      - name: Build release artifact
+        run: |
+          mkdir -p build
+          tar -czf build/stratmark-adpilot-${GITHUB_SHA}.tar.gz \
+            --exclude='./.git' \
+            --exclude='./.env' \
+            --exclude='./storage/*' \
+            --exclude='./.check-*' \
+            --exclude='./.tiny.png' \
+            --exclude='./build' \
+            --exclude='./vendor' \
+            .
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stratmark-adpilot-${{ github.sha }}
+          path: build/*.tar.gz
+          if-no-files-found: error

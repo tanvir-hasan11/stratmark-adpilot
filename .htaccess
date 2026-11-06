@@ -1,0 +1,13 @@
+Options -Indexes
+RewriteEngine On
+
+# Prefer configuring the web server document root as /public.
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ public/index.php [QSA,L]
+
+<FilesMatch "^(\.env|\.env\..*|composer\.(json|lock)|.*\.sql|.*\.log)$">
+  Require all denied
+</FilesMatch>
+
+RedirectMatch 403 ^/(src|config|database|bin|storage|vendor|\.harness|\.git)(/|$)
