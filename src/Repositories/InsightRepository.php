@@ -35,4 +35,27 @@ final class InsightRepository
         $row['ctr'] = (float)$row['impressions'] > 0 ? ((float)$row['clicks'] / (float)$row['impressions']) * 100 : 0.0;
         return $row;
     }
+
+    public function topCampaigns(string $from, string $to, ?int $clientId = null, int $limit = 10): array
+    {
+        $limit = max(1, min(50, $limit));
+        $sql = 'SELECT pa.provider, di.entity_name, SUM(di.spend) spend, SUM(di.conversions) conversions, SUM(di.revenue) revenue
+                FROM daily_insights di JOIN provider_accounts pa ON pa.id = di.provider_account_id
+                WHERE di.insight_date BETWEEN ? AND ? AND di.entity_type IN (\'campaign\', \'ad\')';
+        $params = [$from, $to];
+        if ($clientId !== null) { $sql .= ' AND di.client_id = ?'; $params[] = $clientId; }
+        $sql .= ' GROUP BY pa.provider, di.entity_type, di.entity_id, di.entity_name ORDER BY revenue DESC, spend DESC LIMIT ' . $limit;
+        $stmt = $this->pdo->prepare($sql); $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function dailyTotals(string $from, string $to, ?int $clientId = null): array
+    {
+        $sql = 'SELECT insight_date, SUM(spend) spend, SUM(conversions) conversions FROM daily_insights WHERE insight_date BETWEEN ? AND ?';
+        $params = [$from, $to];
+        if ($clientId !== null) { $sql .= ' AND client_id = ?'; $params[] = $clientId; }
+        $sql .= ' GROUP BY insight_date ORDER BY insight_date ASC';
+        $stmt = $this->pdo->prepare($sql); $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
 }
