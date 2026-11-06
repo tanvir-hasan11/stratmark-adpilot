@@ -1,13 +1,9 @@
 Options -Indexes
 RewriteEngine On
 
-# Prefer configuring the web server document root as /public.
-RewriteCond %{REQUEST_URI} !^/public/
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^ public/index.php [QSA,L]
-
-<FilesMatch "^(\.env|\.env\..*|composer\.(json|lock)|.*\.sql|.*\.log)$">
-  Require all denied
-</FilesMatch>
-
-RedirectMatch 403 ^/(src|config|database|bin|storage|vendor|\.harness|\.git)(/|$)
+# Use public/ as the effective document root when the hosting panel only
+# permits the project root as the domain root.
+RewriteRule ^(?:src|config|database|bin|storage|vendor|\.git|\.harness)(?:/|$) - [F,L,NC]
+RewriteRule ^(?:\.env|\.env\..*|composer\.(?:json|lock)|.*\.sql|.*\.log)$ - [F,L,NC]
+RewriteCond %{REQUEST_URI} !^/public(?:/|$) [NC]
+RewriteRule ^(.*)$ public/$1 [QSA,L]
